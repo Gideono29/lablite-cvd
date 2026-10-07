@@ -15,6 +15,9 @@ def main(argv=None):
     ft = sub.add_parser("fit", help="Fit tier models and estimate the information cost of missing labs")
     ft.add_argument("--out", type=Path, default=Path("outputs/fit"))
     ft.add_argument("--horizon", type=float, default=10.0)
+    bs = sub.add_parser("bootstrap", help="Survey-bootstrap intervals for performance and information cost")
+    bs.add_argument("--out", type=Path, default=Path("outputs/fit"))
+    bs.add_argument("-B", type=int, default=200)
     args = p.parse_args(argv)
 
     if args.cmd == "download":
@@ -26,6 +29,9 @@ def main(argv=None):
     elif args.cmd == "fit":
         from lablite_cvd.pipeline.fit import run_fit
         run_fit(args.data_dir, args.out, horizon=args.horizon)
+    elif args.cmd == "bootstrap":
+        from lablite_cvd.pipeline.fit import run_bootstrap
+        run_bootstrap(args.data_dir, args.out, B=args.B)
 
 
 if __name__ == "__main__":

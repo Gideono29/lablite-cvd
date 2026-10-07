@@ -97,5 +97,10 @@
   "2013-2014": 0.0,
   "2015-2016": 0.0,
   "2017-2018": 0.0
+ },
+ "bootstrap": {
+  "B": 200,
+  "seed": 20261008,
+  "method": "Rao-Wu rescaling over PSUs within strata; fixed out-of-fold predictions; 95% percentile intervals"
  }
 }

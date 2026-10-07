@@ -6,7 +6,8 @@ of censoring weights, with the censoring distribution estimated by Kaplan-Meier 
 """
 import numpy as np
 
-THRESHOLDS = (0.075, 0.20)
+# 1/5/10%: ESC SCORE fatal-CVD cut points; 7.5/20%: ACC/AHA ASCVD cut points. Primary set not yet chosen.
+THRESHOLDS = (0.01, 0.05, 0.075, 0.10, 0.20)
 
 
 def censoring_km(time, event, horizon):

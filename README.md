@@ -32,6 +32,7 @@ pip install -e .[data,test]
 lablite-cvd download   # 127 files from wwwn.cdc.gov and ftp.cdc.gov; SHA-256 manifest in data/raw/manifest.json
 lablite-cvd cohort     # data/processed/{cohort.csv.gz, cohort_flow.csv, missingness.csv, data_dictionary.csv}
 lablite-cvd fit        # outputs/fit/{lablite_params.json, coefficients.csv, performance.csv, information_cost.csv}
+lablite-cvd bootstrap  # outputs/fit/{performance_ci.csv, information_cost_ci.csv}: survey-bootstrap 95% CIs
 pytest -q
 ```
 

@@ -25,7 +25,8 @@ Modeling decisions the code doesn't make for you. Each one names where it applie
    CVD death risk in the analysis set is 1.9%. The 7.5% / 20% thresholds were designed for incident ASCVD,
    so few people cross them (5.6% and 0.5–0.9% flagged) and net benefit at 20% is ~0 for every tier, which
    leaves the primary metric with little to compare. One option is the thresholds used for 10-year fatal CVD
-   in the original ESC SCORE charts (1%, 5%, 10%), keeping 7.5% / 20% as secondary. Decide.
+   in the original ESC SCORE charts (1%, 5%, 10%), keeping 7.5% / 20% as secondary. Both sets are now
+   computed; decide which is primary.
 5. **Competing risk.** Each tier is a cause-specific Cox model and risk = 1 − S(10), which ignores non-CVD
    death; predictions run ~12% high (O/E ≈ 0.88–0.89). Options: keep and recalibrate, or estimate absolute
    risk with a second cause-specific model for non-CVD death (Aalen–Johansen). Decide.
@@ -33,5 +34,7 @@ Modeling decisions the code doesn't make for you. Each one names where it applie
    sex-stratified); linear terms only (no splines or interactions); fitted with normalized MEC weights;
    ridge penalty from {0, 1, 10, 100, 1000} by 5-fold cross-validated partial likelihood (it barely matters:
    the CV likelihood is flat between 0 and 10); capping applies to laboratory inputs only, not SBP or BMI.
-7. **Uncertainty.** `information_cost.csv` has point estimates only. Next step: survey bootstrap (Rao–Wu,
-   as in EquiCVD) for the Δ metrics.
+7. **Bootstrap does not refit the models.** `lablite-cvd bootstrap` (Rao–Wu over PSUs within strata, B = 200)
+   resamples fixed out-of-fold predictions, as EquiCVD did, so the intervals leave out model-fitting
+   variability and are somewhat too narrow. A refitting bootstrap is feasible (one fit takes ~2 min, so B = 200
+   is ~6 h). Decide whether the paper needs it.
