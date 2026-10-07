@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Tier models: weighted ridge Cox (`lablite_cvd.cox`, checked against statsmodels PHReg), `TierModel` /
+  `LabLiteModel` with JSON parameters and `predict(df, tier="auto")`; `lablite-cvd fit` writes parameters,
+  coefficients, out-of-fold performance and information cost (point estimates). Draft, not yet verified.
 - Data pipeline ported from EquiCVD Bench v1.0.0 with urine albumin/creatinine (LAB16, L16_B, L16_C,
   ALB_CR_D-J) added: `lablite-cvd download` (127 files, SHA-256 manifest) and `lablite-cvd cohort`.
 - Cohort keeps participants with missing laboratory values; records `has_*` indicators, `all_labs` and `tier`;

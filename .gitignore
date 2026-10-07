@@ -11,3 +11,6 @@ __pycache__/
 build/
 dist/
 .venv/
+
+# Per-participant predictions; deposit with Zenodo instead of committing
+outputs/**/oof_predictions.csv.gz

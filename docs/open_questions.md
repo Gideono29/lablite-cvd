@@ -7,6 +7,8 @@ Modeling decisions the code doesn't make for you. Each one names where it applie
 2. Cohort keeps everyone with complete T0 inputs; tier comparisons use the all-labs subset; no imputation.
 3. Penalized Cox model per tier; published coefficients.
 4. Primary information cost: Δ net benefit at 7.5% / 20%; secondary ΔAUC, Δcalibration, reclassification.
+5. Horizon 10 years (cycles with adequate 10-year follow-up). UACR enters as log(UACR). Laboratory inputs
+   capped (winsorized) at their 1st and 99th percentiles in the training data.
 
 ## Open
 1. **Office diabetes definition** (`pipeline/cohort.py::derive`). T0 `diabetes` is self-report or medication
@@ -16,10 +18,20 @@ Modeling decisions the code doesn't make for you. Each one names where it applie
    adjustment. NHANES changed the urine creatinine method in 2007 and the albumin method in 2009 (ALB_CR_F
    carries both assays: URXUMA2 / URXUCR2). Check the NHANES lab documentation for recommended
    cross-cycle adjustments and decide whether to apply them.
-3. **Extreme values.** The cohort keeps raw values (max UACR 92,500 mg/g, BMI 130, HbA1c 2.0%). Choose
-   transforms (e.g. log UACR) and winsorization limits for model fitting.
-4. **Informative missingness.** Participants missing any lab (6.0%) had higher all-cause mortality
+3. **Informative missingness.** Participants missing any lab (6.0%) had higher all-cause mortality
    (20.4% vs 13.5%) and CVD mortality (4.2% vs 3.4%) than the all-labs subset. Decide how to report this,
    e.g. a limitations paragraph or a secondary analysis on the naturally-missing group.
-5. **Horizon and cycles.** EquiCVD used a 10-year horizon, keeping 1999–2010 where follow-up is
-   adequate. Confirm the horizon for LabLite-CVD.
+4. **Decision thresholds for a mortality outcome** (`pipeline/metrics.py::THRESHOLDS`). Observed 10-year
+   CVD death risk in the analysis set is 1.9%. The 7.5% / 20% thresholds were designed for incident ASCVD,
+   so few people cross them (5.6% and 0.5–0.9% flagged) and net benefit at 20% is ~0 for every tier, which
+   leaves the primary metric with little to compare. One option is the thresholds used for 10-year fatal CVD
+   in the original ESC SCORE charts (1%, 5%, 10%), keeping 7.5% / 20% as secondary. Decide.
+5. **Competing risk.** Each tier is a cause-specific Cox model and risk = 1 − S(10), which ignores non-CVD
+   death; predictions run ~12% high (O/E ≈ 0.88–0.89). Options: keep and recalibrate, or estimate absolute
+   risk with a second cause-specific model for non-CVD death (Aalen–Johansen). Decide.
+6. **Defaults Claude chose; please confirm:** one model per tier with `female` as a covariate (not
+   sex-stratified); linear terms only (no splines or interactions); fitted with normalized MEC weights;
+   ridge penalty from {0, 1, 10, 100, 1000} by 5-fold cross-validated partial likelihood (it barely matters:
+   the CV likelihood is flat between 0 and 10); capping applies to laboratory inputs only, not SBP or BMI.
+7. **Uncertainty.** `information_cost.csv` has point estimates only. Next step: survey bootstrap (Rao–Wu,
+   as in EquiCVD) for the Δ metrics.
