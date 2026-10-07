@@ -92,5 +92,5 @@ albumin/creatinine added.
 ## Citation
 
 See `CITATION.cff`. Cite all versions with the concept DOI
-[10.5281/zenodo.23225193](https://doi.org/10.5281/zenodo.23225193), or v0.1.0 specifically with
-[10.5281/zenodo.23225194](https://doi.org/10.5281/zenodo.23225194).
+[10.5281/zenodo.23225193](https://doi.org/10.5281/zenodo.23225193), or the verified v0.1.1 specifically with
+[10.5281/zenodo.23225297](https://doi.org/10.5281/zenodo.23225297).

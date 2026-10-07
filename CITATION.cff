@@ -11,8 +11,11 @@ identifiers:
     value: 10.5281/zenodo.23225193
     description: Concept DOI (all versions, resolves to the latest)
   - type: doi
+    value: 10.5281/zenodo.23225297
+    description: Version DOI for v0.1.1 (verified release)
+  - type: doi
     value: 10.5281/zenodo.23225194
-    description: Version DOI for v0.1.0
+    description: Version DOI for v0.1.0 (unverified pre-release)
 repository-code: "https://github.com/Gideono29/lablite-cvd"
 authors:
   - family-names: "Owusu"
