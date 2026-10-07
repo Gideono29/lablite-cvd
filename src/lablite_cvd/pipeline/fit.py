@@ -1,9 +1,10 @@
 """Fit the tier models and estimate the information cost of missing laboratory inputs.
 
 Analysis set: all-labs participants from cycles whose censoring survival at the horizon is at least
-``min_g``. Each tier is a ridge-penalized cause-specific Cox model for CVD death (non-CVD death and the
-horizon censor), fitted with normalized MEC weights. Penalty chosen by cross-validated partial likelihood;
-performance uses out-of-fold predictions with the penalty selected inside each outer fold.
+``min_g``. Each tier has two ridge-penalized cause-specific Cox models, for CVD death and for non-CVD death,
+fitted with normalized MEC weights; absolute CVD-death risk is their cumulative incidence. Penalties are chosen
+by cross-validated partial likelihood, separately per cause; performance uses out-of-fold predictions with the
+penalties selected inside each outer fold.
 """
 import json
 from pathlib import Path
@@ -50,10 +51,12 @@ def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261
     mf = model_frame(d)
     time = np.minimum(d["time"].to_numpy(float), horizon)
     event = ((d["event"] == 1) & (d["time"] <= horizon)).to_numpy(float)
+    other = ((d["event"] == 2) & (d["time"] <= horizon)).to_numpy(float)
     sw = (d["wt"] / d["wt"].mean()).to_numpy(float)
     rng = np.random.default_rng(seed)
     outer = _folds(event, k, rng)
-    print(f"Analysis set n={len(d):,}, CVD deaths within {horizon:g}y={int(event.sum())}, cycles {kept}")
+    print(f"Analysis set n={len(d):,}; within {horizon:g}y: CVD deaths={int(event.sum())}, "
+          f"non-CVD deaths={int(other.sum())}; cycles {kept}")
 
     # Out-of-fold predictions, penalty chosen within each outer training set
     oof = pd.DataFrame(index=d.index, columns=list(FEATURES), dtype=float)
@@ -63,8 +66,9 @@ def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261
         inner = _folds(event[tr], k, rng)
         for tier, feats in FEATURES.items():
             lam, _ = _choose_lambda(mf[tr], feats, time[tr], event[tr], sw[tr], inner)
-            lam_by_fold.setdefault(tier, []).append(lam)
-            m = fit_tier(tier, mf[tr], time[tr], event[tr], sw[tr], lam, horizon)
+            lam_o, _ = _choose_lambda(mf[tr], feats, time[tr], other[tr], sw[tr], inner)
+            lam_by_fold.setdefault(tier, []).append([lam, lam_o])
+            m = fit_tier(tier, mf[tr], time[tr], event[tr], other[tr], sw[tr], lam, lam_o, horizon)
             oof.loc[te, tier] = m.risk(mf[te])
         print(f"  outer fold {f + 1}/{k} done", flush=True)
 
@@ -73,10 +77,14 @@ def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261
     full_folds = _folds(event, k, rng)
     for tier, feats in FEATURES.items():
         lam, scores = _choose_lambda(mf, feats, time, event, sw, full_folds)
-        cv_scores[tier] = {str(l): s for l, s in scores.items()}
-        tiers[tier] = fit_tier(tier, mf, time, event, sw, lam, horizon)
-    meta = {"horizon": horizon, "outcome": "CVD death (cause-specific; non-CVD death censored)",
-            "cycles": kept, "n": int(len(d)), "events": int(event.sum()), "seed": seed,
+        lam_o, scores_o = _choose_lambda(mf, feats, time, other, sw, full_folds)
+        cv_scores[tier] = {"cvd": {str(l): s for l, s in scores.items()},
+                           "other": {str(l): s for l, s in scores_o.items()}}
+        tiers[tier] = fit_tier(tier, mf, time, event, other, sw, lam, lam_o, horizon)
+    meta = {"horizon": horizon,
+            "outcome": "CVD death by the horizon; absolute risk with non-CVD death as a competing event",
+            "cycles": kept, "n": int(len(d)), "events": int(event.sum()), "competing_events": int(other.sum()),
+            "seed": seed,
             "status": "DRAFT - not verified by the maintainer"}
     model = LabLiteModel(tiers, meta)
     model.to_json(out / "lablite_params.json")
@@ -95,14 +103,15 @@ def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261
 
     oof.assign(SEQN=d["SEQN"], fold=outer).to_csv(out / "oof_predictions.csv.gz", index=False)
     (out / "fit_meta.json").write_text(json.dumps(
-        {**meta, "lambdas_grid": LAMBDAS, "lambda_chosen": {t: m.lam for t, m in tiers.items()},
-         "lambda_by_outer_fold": lam_by_fold, "cv_loglik": cv_scores,
+        {**meta, "lambdas_grid": LAMBDAS,
+         "lambda_chosen": {t: {"cvd": m.lam, "other": m.lam_other} for t, m in tiers.items()},
+         "lambda_by_outer_fold_cvd_other": lam_by_fold, "cv_loglik": cv_scores,
          "G_horizon_by_cycle": {c: float(g) for c, g in g_h.items()}}, indent=1))
 
     pd.set_option("display.width", 160)
     print("\nPerformance (out-of-fold, survey-weighted, IPCW):")
     print(perf[["OE", "cal_slope", "AUC", "NB_1", "NB_5", "NB_7.5", "NB_10", "NB_20"]].round(4).to_string())
-    print("\nInformation cost (richer minus poorer tier; positive = lost without the labs):")
+    print("\nInformation cost (richer minus poorer tier; positive = lost without the labs; primary cut points):")
     print(cost[["dAUC", "dNB_1", "dNB_5", "dNB_10", "pct_reclassified_1/5/10"]].round(4).to_string())
     print(f"\nWritten: {out}")
     return model, perf, cost

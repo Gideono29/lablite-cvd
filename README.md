@@ -41,9 +41,11 @@ examined, not pregnant, had no self-reported CVD, were eligible for linkage and 
 inputs. Laboratory values are **left missing**, never imputed; each participant's highest available tier is
 recorded. Outcome: CVD death (heart disease or cerebrovascular), with non-CVD death as a competing event.
 
-**Models:** one ridge-penalized Cox model per tier for 10-year CVD death, fitted on all-labs participants from
+**Models:** per tier, ridge-penalized cause-specific Cox models for CVD death and for non-CVD death; the
+absolute 10-year CVD-death risk is their cumulative incidence (non-CVD death as a competing event). Fitted on all-labs participants from
 1999–2010 (cycles with adequate 10-year follow-up). log(UACR); laboratory inputs capped at the training 1st/99th
-percentiles. Performance and information cost use out-of-fold (5-fold) predictions, survey-weighted with IPCW.
+percentiles. Performance and information cost use out-of-fold (5-fold) predictions, survey-weighted with IPCW;
+net benefit and reclassification at 1/5/10% (primary) and 7.5/20% (secondary).
 
 ## Documentation
 

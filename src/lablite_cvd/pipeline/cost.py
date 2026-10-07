@@ -7,7 +7,7 @@ out-of-fold predictions and IPCW weights (models are not refitted per replicate)
 import numpy as np
 import pandas as pd
 
-from lablite_cvd.pipeline.metrics import THRESHOLDS, performance
+from lablite_cvd.pipeline.metrics import PRIMARY_THRESHOLDS, SECONDARY_THRESHOLDS, THRESHOLDS, performance
 
 COMPARISONS = [
     ("T3", "T0", "all labs"),
@@ -16,8 +16,8 @@ COMPARISONS = [
     ("T1", "T0", "lipids"),
     ("T2", "T1", "HbA1c, eGFR"),
 ]
-# Risk categories for reclassification: (name, inner cut points)
-CATEGORY_SETS = {"1/5/10": (0.01, 0.05, 0.10), "7.5/20": (0.075, 0.20)}
+# Risk categories for reclassification: name -> inner cut points (1/5/10 primary)
+CATEGORY_SETS = {"1/5/10": PRIMARY_THRESHOLDS, "7.5/20": SECONDARY_THRESHOLDS}
 DELTA_METRICS = ["AUC", "cal_slope", "OE"] + [f"NB_{t * 100:g}" for t in THRESHOLDS]
 
 

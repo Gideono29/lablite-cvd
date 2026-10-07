@@ -46,9 +46,13 @@ class TierModel:
     caps: dict  # feature -> [low, high]
     center: list
     scale: list
-    beta: list  # per standardized feature
+    beta: list  # CVD death, per standardized feature
+    beta_other: list  # non-CVD death (competing event), per standardized feature
     lam: float
-    cumhaz0: float  # baseline cumulative hazard at horizon, at the centered linear predictor
+    lam_other: float
+    times: list  # distinct event times (years) up to the horizon, either cause
+    dh_cvd: list  # baseline hazard increments on ``times`` at the centered linear predictor
+    dh_other: list
     horizon: float
 
     def design(self, mf: pd.DataFrame) -> np.ndarray:
@@ -57,18 +61,22 @@ class TierModel:
             X[f] = X[f].clip(lo, hi)
         return (X.to_numpy(float) - np.array(self.center)) / np.array(self.scale)
 
-    def linear_predictor(self, mf: pd.DataFrame) -> np.ndarray:
-        return self.design(mf) @ np.array(self.beta)
+    def linear_predictor(self, mf: pd.DataFrame, cause: str = "cvd") -> np.ndarray:
+        return self.design(mf) @ np.array(self.beta if cause == "cvd" else self.beta_other)
 
     def risk(self, mf: pd.DataFrame) -> np.ndarray:
-        return 1 - np.exp(-self.cumhaz0 * np.exp(self.linear_predictor(mf)))
+        """Absolute risk of CVD death by the horizon, accounting for non-CVD death as a competing event."""
+        Z = self.design(mf)
+        return cox.cumulative_incidence(np.array(self.times), np.array(self.dh_cvd), np.array(self.dh_other),
+                                        np.exp(Z @ np.array(self.beta)), np.exp(Z @ np.array(self.beta_other)))
 
     def coefficients(self) -> pd.DataFrame:
-        """Hazard ratios per SD and per original unit."""
-        b = np.array(self.beta)
+        """Cause-specific hazard ratios per SD and per original unit."""
+        b, bo = np.array(self.beta), np.array(self.beta_other)
         sd = np.array(self.scale)
         return pd.DataFrame({"feature": self.features, "beta_per_sd": b, "beta_per_unit": b / sd,
-                             "hr_per_unit": np.exp(b / sd), "sd": sd, "mean": self.center})
+                             "hr_per_unit": np.exp(b / sd), "beta_other_per_sd": bo,
+                             "hr_other_per_unit": np.exp(bo / sd), "sd": sd, "mean": self.center})
 
 
 def prepare(mf: pd.DataFrame, feats: list):
@@ -81,13 +89,20 @@ def prepare(mf: pd.DataFrame, feats: list):
     return (X.to_numpy(float) - center) / scale, caps, center, scale
 
 
-def fit_tier(tier, mf, time, event, w, lam, horizon) -> TierModel:
+def fit_tier(tier, mf, time, event_cvd, event_other, w, lam, lam_other, horizon) -> TierModel:
+    """Fit cause-specific Cox models for CVD and non-CVD death on the same standardized features."""
     feats = FEATURES[tier]
     Z, caps, center, scale = prepare(mf, feats)
-    beta = cox.fit(Z, time, event, w, lam)
-    h0 = cox.baseline_cumhaz(Z, time, event, w, beta, horizon)
-    return TierModel(tier, feats, caps, center.tolist(), scale.tolist(), beta.tolist(), float(lam), h0,
-                     float(horizon))
+    beta = cox.fit(Z, time, event_cvd, w, lam)
+    beta_o = cox.fit(Z, time, event_other, w, lam_other)
+    t1, h1 = cox.baseline_hazard(Z, time, event_cvd, w, beta, horizon)
+    t2, h2 = cox.baseline_hazard(Z, time, event_other, w, beta_o, horizon)
+    times = np.union1d(t1, t2)
+    dh1, dh2 = np.zeros(len(times)), np.zeros(len(times))
+    dh1[np.searchsorted(times, t1)] = h1
+    dh2[np.searchsorted(times, t2)] = h2
+    return TierModel(tier, feats, caps, center.tolist(), scale.tolist(), beta.tolist(), beta_o.tolist(),
+                     float(lam), float(lam_other), times.tolist(), dh1.tolist(), dh2.tolist(), float(horizon))
 
 
 class LabLiteModel:

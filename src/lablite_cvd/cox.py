@@ -56,15 +56,30 @@ def fit(X, time, event, w=None, lam=0.0, max_iter=50, tol=1e-9):
     return beta
 
 
-def baseline_cumhaz(X, time, event, w, beta, horizon):
-    """Breslow baseline cumulative hazard at ``horizon`` (for linear predictor X @ beta = 0)."""
+def baseline_hazard(X, time, event, w, beta, horizon):
+    """Breslow baseline hazard increments (for linear predictor X @ beta = 0) at each distinct event time
+    up to ``horizon``. Returns (times, increments)."""
     X = np.asarray(X, float)
     time = np.asarray(time, float)
     order, start = _risk_sets(time)
     s0, _, _ = _sums(X, np.asarray(w, float), X @ beta, order, start, second=False)
     d = (np.asarray(w, float) * np.asarray(event, float))[order]
-    at = (d > 0) & (time[order] <= horizon)
-    return float(np.sum(d[at] / s0[at]))
+    ts = time[order]
+    at = (d > 0) & (ts <= horizon)
+    times, inv = np.unique(ts[at], return_inverse=True)
+    return times, np.bincount(inv, weights=d[at] / s0[at], minlength=len(times))
+
+
+def cumulative_incidence(times, dh_cause, dh_other, risk_cause, risk_other):
+    """Cumulative incidence of the cause by the last time, from two cause-specific Cox models.
+
+    times: sorted union of event times; dh_*: baseline hazard increments on that grid; risk_*: exp(linear
+    predictor) per person. F = sum_j S(t_j-) * dh_cause_j * risk_cause, S(t-) = exp(-cumulative hazards before t).
+    """
+    dh1 = np.outer(risk_cause, dh_cause)
+    dh2 = np.outer(risk_other, dh_other)
+    cum_before = np.cumsum(dh1 + dh2, axis=1) - (dh1 + dh2)
+    return np.sum(np.exp(-cum_before) * dh1, axis=1)
 
 
 def cv_log_likelihood(X, time, event, w, lam, folds):

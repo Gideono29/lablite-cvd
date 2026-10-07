@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Competing risks: each tier adds a cause-specific Cox model for non-CVD death; predicted risk is the cumulative
+  incidence of CVD death (O/E 0.88 -> 0.98). Parameter JSON now stores baseline hazard steps for both causes.
+- Primary decision thresholds 1/5/10%; 7.5/20% secondary.
 - `lablite-cvd bootstrap`: Rao–Wu survey bootstrap (B = 200) for per-tier metrics and information cost.
   Information cost now covers each lab group (T1−T0, T2−T1, T3−T2) as well as each tier vs T3; net benefit
   at 1/5/7.5/10/20%; reclassification at 1/5/10% and 7.5/20% cut points.

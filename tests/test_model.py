@@ -41,7 +41,7 @@ def test_fit_recovers_signal_and_json_roundtrip(tmp_path):
     df, time, event = _sim()
     mf = model_frame(df)
     w = np.ones(len(df))
-    model = LabLiteModel({t: fit_tier(t, mf, time, event, w, 1.0, 10.0) for t in FEATURES})
+    model = LabLiteModel({t: fit_tier(t, mf, time, event, 0 * event, w, 1.0, 1.0, 10.0) for t in FEATURES})
     coef = model.tiers["T3"].coefficients().set_index("feature")
     assert coef.loc["log_uacr", "beta_per_unit"] == pytest.approx(0.3, abs=0.1)
     assert coef.loc["smoker", "beta_per_unit"] == pytest.approx(0.5, abs=0.15)
@@ -53,7 +53,7 @@ def test_fit_recovers_signal_and_json_roundtrip(tmp_path):
 
 def test_predict_auto_uses_highest_available_tier():
     df, time, event = _sim()
-    model = LabLiteModel({t: fit_tier(t, model_frame(df), time, event, np.ones(len(df)), 1.0, 10.0)
+    model = LabLiteModel({t: fit_tier(t, model_frame(df), time, event, 0 * event, np.ones(len(df)), 1.0, 1.0, 10.0)
                           for t in FEATURES})
     rows = df.iloc[:3].copy()
     rows.loc[rows.index[1], "uacr"] = np.nan
@@ -67,7 +67,7 @@ def test_predict_auto_uses_highest_available_tier():
 
 def test_capping_limits_extreme_inputs():
     df, time, event = _sim()
-    m = fit_tier("T3", model_frame(df), time, event, np.ones(len(df)), 1.0, 10.0)
+    m = fit_tier("T3", model_frame(df), time, event, 0 * event, np.ones(len(df)), 1.0, 1.0, 10.0)
     extreme = df.iloc[[0]].assign(uacr=1e6)
     capped = df.iloc[[0]].assign(uacr=np.exp(m.caps["log_uacr"][1]))
     assert m.risk(model_frame(extreme))[0] == pytest.approx(m.risk(model_frame(capped))[0])
@@ -79,3 +79,32 @@ def test_net_benefit_known_values():
     assert net_benefit(np.array([0.9, 0.0, 0.0, 0.0]), y, W, 0.2) == pytest.approx(0.25)
     # treat all: 1/4 - 3/4 * 0.25
     assert net_benefit(np.ones(4), y, W, 0.2) == pytest.approx(0.25 - 0.75 * 0.25)
+
+
+def test_cumulative_incidence_matches_competing_risk_truth():
+    # No covariate effects, constant cause-specific hazards, censoring at 12 years. With no censoring before the
+    # horizon, the cumulative incidence estimate must equal the empirical proportion dying of cause 1 by 10 y,
+    # and both should be near h1 / (h1 + h2) * (1 - exp(-(h1 + h2) * 10)).
+    rng = np.random.default_rng(3)
+    n, h1, h2 = 40000, 0.004, 0.012
+    df = _sim(n, seed=4)[0]
+    t_all = rng.exponential(1 / (h1 + h2), n)
+    cause = np.where(rng.uniform(size=n) < h1 / (h1 + h2), 1, 2)
+    time = np.minimum(np.ceil(t_all * 12) / 12, 12.0)  # monthly, like the linked mortality file
+    died = t_all < 12.0
+    m = fit_tier("T0", model_frame(df), time, (died & (cause == 1)).astype(float),
+                 (died & (cause == 2)).astype(float), np.ones(n), 1000.0, 1000.0, 10.0)
+    risk = m.risk(model_frame(df)).mean()
+    assert risk == pytest.approx(np.mean(died & (cause == 1) & (t_all <= 10)), abs=1e-4)
+    assert risk == pytest.approx(h1 / (h1 + h2) * (1 - np.exp(-(h1 + h2) * 10.0)), abs=0.003)
+
+
+def test_competing_risk_lowers_risk():
+    df, time, event = _sim()
+    rng = np.random.default_rng(5)
+    other = ((rng.uniform(size=len(df)) < 0.3) & (event == 0)).astype(float)
+    mf = model_frame(df)
+    w = np.ones(len(df))
+    without = fit_tier("T0", mf, time, event, 0 * event, w, 1.0, 1.0, 10.0).risk(mf)
+    with_cr = fit_tier("T0", mf, time, event, other, w, 1.0, 1.0, 10.0).risk(mf)
+    assert np.all(with_cr <= without + 1e-12) and with_cr.mean() < without.mean()
