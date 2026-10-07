@@ -1,0 +1,12 @@
+# NHANES / NCHS files are downloaded, not committed
+data/raw/
+data/processed/*.csv.gz
+*.part
+
+*.log
+__pycache__/
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+.venv/
