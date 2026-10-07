@@ -14,8 +14,8 @@ renal or urine-albumin measurements aren't available.
 Maintainer: Gideon Owusu, Michigan Technological University
 ([ORCID 0009-0000-0540-7449](https://orcid.org/0009-0000-0540-7449))
 
-**Status:** `0.1.0`, pre-release. The fitted parameters ship with the package but haven't yet been independently
-verified by the maintainer. See the [model card](https://github.com/Gideono29/lablite-cvd/blob/main/docs/model_card.md) for performance, subgroup results and
+**Status:** `0.1.1`. The fitted parameters ship with the package and were verified by the maintainer on
+2026-10-07. See the [model card](https://github.com/Gideono29/lablite-cvd/blob/main/docs/model_card.md) for performance, subgroup results and
 limitations.
 
 ## Usage

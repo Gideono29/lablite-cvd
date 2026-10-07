@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lablite-cvd"
-version = "0.1.0"
+version = "0.1.1"
 description = "LabLite-CVD: explainable, tiered-input cardiovascular risk model quantifying the information cost of missing laboratory data (research use only)"
 readme = "README.md"
 requires-python = ">=3.10"

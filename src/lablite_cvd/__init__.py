@@ -9,7 +9,7 @@ Not a medical device. Not validated for clinical decision-making.
 
 from lablite_cvd.tiers import TIERS, available_tier, available_tiers
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 RESEARCH_USE_NOTICE = (
     "LabLite-CVD is for research use only. It is not a medical device and must not be "

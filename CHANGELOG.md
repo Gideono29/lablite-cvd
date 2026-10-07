@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 (2026-10-07)
+- Parameters and results verified by the maintainer; `meta.status` updated. Model and parameters are
+  otherwise identical to 0.1.0.
+
 ## 0.1.0 (2026-10-07)
 Published on PyPI as a pre-release: the fitted parameters are not yet verified by the maintainer
 (`meta.status` in the parameter file). A verified release will follow as a new version.

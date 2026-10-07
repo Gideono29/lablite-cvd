@@ -1,4 +1,4 @@
-# Model card: LabLite-CVD 0.1.0
+# Model card: LabLite-CVD 0.1.1
 
 Structure follows Mitchell et al., "Model Cards for Model Reporting" (FAT* 2019). All numbers come from files in
 `outputs/fit/` and `data/processed/`, produced by the commands in the README. The modeling decisions and their
@@ -7,13 +7,13 @@ rationale are in `docs/open_questions.md`.
 > **Research use only.** LabLite-CVD is not a medical device. It must not be used for individual clinical
 > decisions, treatment allocation, or in place of a validated clinical risk tool.
 
-> **Verification status:** these parameters have not yet been independently verified by the maintainer
-> (`meta.status` in the parameter file). Treat 0.1.0 as a pre-release.
+> **Verification status:** parameters and results verified by the maintainer on 2026-10-07 (`meta.status` in
+> the parameter file). 0.1.0 was the unverified pre-release of the same parameters.
 
 ## Model details
 - **Developer:** Gideon Owusu, Michigan Technological University
   ([ORCID 0009-0000-0540-7449](https://orcid.org/0009-0000-0540-7449)).
-- **Version:** 0.1.0 (October 2026). License: MIT.
+- **Version:** 0.1.1 (October 2026). License: MIT.
 - **Model type:** four nested *tiers*, each a pair of ridge-penalized cause-specific Cox proportional hazards
   models, one for CVD death and one for non-CVD death. Predicted 10-year risk of CVD death is the cumulative
   incidence from the two models, so non-CVD death is treated as a competing event.
