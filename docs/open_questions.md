@@ -35,9 +35,9 @@ Modeling decisions the code doesn't make for you. Each one names where it applie
     `outputs/fit/nonlinearity_check.csv`), which showed gains for eGFR, BMI, HDL, HbA1c and log UACR.
     Shape curves in `outputs/fit/shape_functions.csv`.
 
+15. Age stays linear in the main model (decided 2026-10-07). The age-spline fit is reported as a sensitivity
+    analysis (`outputs/sensitivity_age_spline/`): conclusions unchanged (T3 AUC 0.830 vs 0.829; UACR ΔAUC
+    0.014 in both; O/E 0.98 in both), despite a +3.0 cross-validated likelihood gain for age in the CVD model.
+
 ## Open
-1. **Age linear vs spline.** Age was kept linear when splines were adopted, but the non-linearity check
-   showed a +3.0 cross-validated likelihood gain for age in the CVD model. Sensitivity fit with age also as a
-   spline (`outputs/sensitivity_age_spline/`): conclusions unchanged (T3 AUC 0.830 vs 0.829; all labs vs
-   office ΔAUC 0.017 vs 0.016; UACR ΔAUC 0.014 in both; O/E 0.98 in both). Suggestion: keep age linear for
-   the main model and report this as a sensitivity analysis.
+None. Next: model card, packaging the parameters, TestPyPI release; then the refitting bootstrap (item 13).
