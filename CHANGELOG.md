@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Prespecified restricted cubic splines (4 knots) for every continuous input except age; knots stored in the
+  parameter JSON; `TierModel.shape()` and `outputs/fit/shape_functions.csv` give log hazard ratio curves.
+- `cox.fit` returns zero coefficients when there are no events.
 - UACR: pre-2007 urine creatinine adjusted to the 2007+ enzymatic method (NHANES ALB_CR_E equations).
 - SBP and BMI also capped at training 1st/99th percentiles; `predict()` warns for age outside 40-79.
 - Cox fit uses step halving (robust to near-collinear inputs).

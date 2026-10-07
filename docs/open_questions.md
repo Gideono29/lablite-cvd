@@ -22,21 +22,22 @@ Modeling decisions the code doesn't make for you. Each one names where it applie
 10. Informative missingness: limitations paragraph plus a descriptive secondary analysis
     (`outputs/fit/missing_group_check.csv`). In 1999–2010, the final models applied with `tier="auto"` to the
     813 participants naturally missing a lab (41 CVD deaths) **underpredict**: observed 3.5% vs predicted
-    2.4%, O/E 1.46. This must appear in the model card as a caution for `tier="auto"`.
+    2.6%, O/E 1.38 (1.46 before splines). This must appear in the model card as a caution for `tier="auto"`.
 11. Kept defaults: one pair of models per tier with `female` as a covariate (not sex-stratified); fitted with
     normalized MEC weights; ridge penalty from {0, 1, 10, 100, 1000} by 5-fold cross-validated partial
     likelihood.
 12. Continuous inputs except age (SBP, BMI and all labs) capped at the training 1st / 99th percentiles;
     `predict()` warns when age is outside 40–79.
 13. Refitting bootstrap for the paper's main intervals: run after the TestPyPI release.
+14. Prespecified 4-knot restricted cubic splines (knots at the 5/35/65/95th percentiles of the capped
+    training values) for every continuous input except age, in both cause-specific models. Motivated by
+    `scripts/nonlinearity_check.py` (linear vs spline, cross-validated likelihood;
+    `outputs/fit/nonlinearity_check.csv`), which showed gains for eGFR, BMI, HDL, HbA1c and log UACR.
+    Shape curves in `outputs/fit/shape_functions.csv`.
 
 ## Open
-1. **Linear terms vs splines.** `scripts/nonlinearity_check.py` replaces each continuous term with a 4-knot
-   restricted cubic spline (2 extra df) and compares 5-fold cross-validated partial log-likelihood
-   (`outputs/fit/nonlinearity_check.csv`). Gains above ~2 suggest real non-linearity:
-   - CVD death: eGFR +6.9, BMI +6.3, age +3.0, log UACR +2.7, HDL +2.3; SBP, total cholesterol, HbA1c ≤ 0.
-   - Non-CVD death: BMI +14.7, HDL +13.3, HbA1c +10.9, eGFR +3.5; others ≤ 0.2.
-   Linear terms are not supported for several inputs, including two labs (eGFR, HbA1c) whose information
-   cost may be understated under linearity. Options: (a) prespecified splines for all continuous inputs in
-   both models; (b) splines only where the check shows a gain (data-driven, needs reporting as such);
-   (c) keep linear and report the check as a limitation.
+1. **Age linear vs spline.** Age was kept linear when splines were adopted, but the non-linearity check
+   showed a +3.0 cross-validated likelihood gain for age in the CVD model. Sensitivity fit with age also as a
+   spline (`outputs/sensitivity_age_spline/`): conclusions unchanged (T3 AUC 0.830 vs 0.829; all labs vs
+   office ΔAUC 0.017 vs 0.016; UACR ΔAUC 0.014 in both; O/E 0.98 in both). Suggestion: keep age linear for
+   the main model and report this as a sensitivity analysis.

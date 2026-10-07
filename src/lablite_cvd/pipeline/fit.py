@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from lablite_cvd import cox
-from lablite_cvd.model import FEATURES, LabLiteModel, fit_tier, model_frame, prepare
+from lablite_cvd.model import FEATURES, SPLINE, LabLiteModel, fit_tier, model_frame, prepare
 from lablite_cvd.pipeline.cost import bootstrap, cost_rows, tier_metrics
 from lablite_cvd.pipeline.metrics import ipcw, weighted_auc
 
@@ -36,8 +36,8 @@ def _folds(y, k, rng):
     return f
 
 
-def _choose_lambda(mf, feats, time, event, sw, folds):
-    Z = prepare(mf, feats)[0]
+def _choose_lambda(mf, feats, time, event, sw, folds, spline=SPLINE):
+    Z = prepare(mf, feats, spline)[0]
     scores = {lam: cox.cv_log_likelihood(Z, time, event, sw, lam, folds) for lam in LAMBDAS}
     return max(scores, key=scores.get), scores
 
@@ -64,7 +64,21 @@ def missing_group_check(cohort: pd.DataFrame, cycles, model: LabLiteModel, horiz
     return pd.DataFrame(rows)
 
 
-def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261007):
+def shape_functions(model: LabLiteModel, mf: pd.DataFrame) -> pd.DataFrame:
+    """Log hazard ratio curves (1st-99th percentile grid, relative to the median) for every continuous feature."""
+    rows = []
+    for tier, m in model.tiers.items():
+        for f in [f for f in m.features if f in m.knots or f == "age"]:
+            lo, hi = np.percentile(mf[f], [1, 99])
+            grid, ref = np.linspace(lo, hi, 50), float(np.median(mf[f]))
+            for cause in ("cvd", "other"):
+                for v, lhr in zip(grid, m.shape(f, grid, ref, cause)):
+                    rows.append({"tier": tier, "cause": cause, "feature": f, "value": v, "reference": ref,
+                                 "log_hr": lhr})
+    return pd.DataFrame(rows)
+
+
+def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261007, spline=SPLINE):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     cohort = pd.read_csv(Path(data_dir) / "processed" / "cohort.csv.gz")
@@ -87,10 +101,10 @@ def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261
         tr, te = outer != f, outer == f
         inner = _folds(event[tr], k, rng)
         for tier, feats in FEATURES.items():
-            lam, _ = _choose_lambda(mf[tr], feats, time[tr], event[tr], sw[tr], inner)
-            lam_o, _ = _choose_lambda(mf[tr], feats, time[tr], other[tr], sw[tr], inner)
+            lam, _ = _choose_lambda(mf[tr], feats, time[tr], event[tr], sw[tr], inner, spline)
+            lam_o, _ = _choose_lambda(mf[tr], feats, time[tr], other[tr], sw[tr], inner, spline)
             lam_by_fold.setdefault(tier, []).append([lam, lam_o])
-            m = fit_tier(tier, mf[tr], time[tr], event[tr], other[tr], sw[tr], lam, lam_o, horizon)
+            m = fit_tier(tier, mf[tr], time[tr], event[tr], other[tr], sw[tr], lam, lam_o, horizon, spline)
             oof.loc[te, tier] = m.risk(mf[te])
         print(f"  outer fold {f + 1}/{k} done", flush=True)
 
@@ -98,20 +112,21 @@ def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261
     tiers, cv_scores = {}, {}
     full_folds = _folds(event, k, rng)
     for tier, feats in FEATURES.items():
-        lam, scores = _choose_lambda(mf, feats, time, event, sw, full_folds)
-        lam_o, scores_o = _choose_lambda(mf, feats, time, other, sw, full_folds)
+        lam, scores = _choose_lambda(mf, feats, time, event, sw, full_folds, spline)
+        lam_o, scores_o = _choose_lambda(mf, feats, time, other, sw, full_folds, spline)
         cv_scores[tier] = {"cvd": {str(l): s for l, s in scores.items()},
                            "other": {str(l): s for l, s in scores_o.items()}}
-        tiers[tier] = fit_tier(tier, mf, time, event, other, sw, lam, lam_o, horizon)
+        tiers[tier] = fit_tier(tier, mf, time, event, other, sw, lam, lam_o, horizon, spline)
     meta = {"horizon": horizon,
             "outcome": "CVD death by the horizon; absolute risk with non-CVD death as a competing event",
             "cycles": kept, "n": int(len(d)), "events": int(event.sum()), "competing_events": int(other.sum()),
-            "seed": seed,
+            "seed": seed, "spline_features": list(spline),
             "status": "DRAFT - not verified by the maintainer"}
     model = LabLiteModel(tiers, meta)
     model.to_json(out / "lablite_params.json")
     pd.concat([m.coefficients().assign(tier=t) for t, m in tiers.items()]).to_csv(out / "coefficients.csv",
                                                                                  index=False)
+    shape_functions(model, mf).to_csv(out / "shape_functions.csv", index=False)
 
     # Performance per tier and information cost (point estimates; `lablite-cvd bootstrap` adds intervals)
     oof = oof.astype(float)

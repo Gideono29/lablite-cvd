@@ -12,21 +12,11 @@ import numpy as np
 import pandas as pd
 
 from lablite_cvd import cox
-from lablite_cvd.model import FEATURES, model_frame, prepare
+from lablite_cvd.model import FEATURES, model_frame, prepare, rcs_basis
 from lablite_cvd.pipeline.fit import LAMBDAS, _folds, analysis_set
 
 HORIZON, MIN_G, SEED = 10.0, 0.10, 20261009
 CONTINUOUS = ["age", "sbp", "bmi", "total_chol", "hdl", "hba1c", "egfr", "log_uacr"]
-
-
-def rcs_basis(x, knots):
-    """Non-linear part of a restricted cubic spline (k knots -> k-2 columns)."""
-    k = np.asarray(knots, float)
-    t_last, t_pen = k[-1], k[-2]
-    cube = lambda u: np.clip(u, 0, None) ** 3
-    cols = [cube(x - t) - cube(x - t_pen) * (t_last - t) / (t_last - t_pen)
-            + cube(x - t_last) * (t_pen - t) / (t_last - t_pen) for t in k[:-2]]
-    return np.column_stack(cols) / (t_last - k[0]) ** 2
 
 
 def cv_ll(Z, time, event, w, folds):
@@ -41,7 +31,7 @@ def main(data_dir=Path("data"), out=Path("outputs/fit")):
     d, _, _ = analysis_set(cohort, HORIZON, MIN_G)
     mf = model_frame(d)
     feats = FEATURES["T3"]
-    Z, *_ = prepare(mf, feats)  # capped and standardized, as in the fitted models
+    Z, *_ = prepare(mf, feats, spline=())  # capped and standardized, linear terms only
     capped = pd.DataFrame(Z, columns=feats)
     time = np.minimum(d["time"].to_numpy(float), HORIZON)
     w = (d["wt"] / d["wt"].mean()).to_numpy(float)

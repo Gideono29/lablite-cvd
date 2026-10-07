@@ -23,6 +23,30 @@ for _t, _prev in (("T1", "T0"), ("T2", "T1"), ("T3", "T2")):
 CAPPED = ["sbp", "bmi", "total_chol", "hdl", "hba1c", "egfr", "log_uacr"]
 CAP_PCTL = (1, 99)
 AGE_RANGE = (40, 79)  # eligibility range of the development cohort
+# Prespecified restricted cubic splines (4 knots) for every continuous feature except age, which stays linear
+SPLINE = CAPPED
+KNOT_PCTL = (5, 35, 65, 95)
+
+
+def rcs_basis(x, knots):
+    """Non-linear columns of a restricted cubic spline (Harrell): k knots -> k-2 columns."""
+    x = np.asarray(x, float)
+    k = np.asarray(knots, float)
+    t_last, t_pen = k[-1], k[-2]
+    cube = lambda u: np.clip(u, 0, None) ** 3
+    cols = [cube(x - t) - cube(x - t_pen) * (t_last - t) / (t_last - t_pen)
+            + cube(x - t_last) * (t_pen - t) / (t_last - t_pen) for t in k[:-2]]
+    return np.column_stack(cols) / (t_last - k[0]) ** 2
+
+
+def expand(X: pd.DataFrame, knots: dict) -> pd.DataFrame:
+    """Linear columns for every feature plus spline columns ``<feature>_s1..`` for those in ``knots``."""
+    out = X.copy()
+    for f, kn in knots.items():
+        basis = rcs_basis(X[f], kn)
+        for j in range(basis.shape[1]):
+            out[f"{f}_s{j + 1}"] = basis[:, j]
+    return out
 
 
 def model_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -46,10 +70,12 @@ class TierModel:
     tier: str
     features: list
     caps: dict  # feature -> [low, high]
+    knots: dict  # feature -> restricted cubic spline knots (on the capped scale)
+    columns: list  # design columns: features, then spline columns
     center: list
     scale: list
-    beta: list  # CVD death, per standardized feature
-    beta_other: list  # non-CVD death (competing event), per standardized feature
+    beta: list  # CVD death, per standardized design column
+    beta_other: list  # non-CVD death (competing event), per standardized design column
     lam: float
     lam_other: float
     times: list  # distinct event times (years) up to the horizon, either cause
@@ -61,6 +87,7 @@ class TierModel:
         X = mf[self.features].copy()
         for f, (lo, hi) in self.caps.items():
             X[f] = X[f].clip(lo, hi)
+        X = expand(X, self.knots)[self.columns]
         return (X.to_numpy(float) - np.array(self.center)) / np.array(self.scale)
 
     def linear_predictor(self, mf: pd.DataFrame, cause: str = "cvd") -> np.ndarray:
@@ -73,28 +100,48 @@ class TierModel:
                                         np.exp(Z @ np.array(self.beta)), np.exp(Z @ np.array(self.beta_other)))
 
     def coefficients(self) -> pd.DataFrame:
-        """Cause-specific hazard ratios per SD and per original unit."""
+        """Coefficients per design column (standardized and original scale), both causes."""
         b, bo = np.array(self.beta), np.array(self.beta_other)
         sd = np.array(self.scale)
-        return pd.DataFrame({"feature": self.features, "beta_per_sd": b, "beta_per_unit": b / sd,
-                             "hr_per_unit": np.exp(b / sd), "beta_other_per_sd": bo,
-                             "hr_other_per_unit": np.exp(bo / sd), "sd": sd, "mean": self.center})
+        return pd.DataFrame({"column": self.columns, "beta_per_sd": b, "beta_per_unit": b / sd,
+                             "beta_other_per_sd": bo, "beta_other_per_unit": bo / sd, "sd": sd,
+                             "mean": self.center})
+
+    def shape(self, feature: str, grid, reference: float, cause: str = "cvd") -> np.ndarray:
+        """Log hazard ratio of ``feature`` over ``grid`` relative to ``reference`` (other inputs fixed)."""
+        cols = [c for c in self.columns if c == feature or c.startswith(feature + "_s")]
+        idx = [self.columns.index(c) for c in cols]
+        b = np.array(self.beta if cause == "cvd" else self.beta_other)[idx] / np.array(self.scale)[idx]
+
+        def contrib(v):
+            v = np.asarray(v, float)
+            if feature in self.caps:
+                v = np.clip(v, *self.caps[feature])
+            X = pd.DataFrame({feature: v})
+            return expand(X, {feature: self.knots[feature]} if feature in self.knots else {})[cols].to_numpy() @ b
+
+        return contrib(grid) - contrib([reference])[0]
 
 
-def prepare(mf: pd.DataFrame, feats: list):
-    """Cap laboratory features at training percentiles and standardize. Returns (Z, caps, center, scale)."""
+def prepare(mf: pd.DataFrame, feats: list, spline=SPLINE):
+    """Cap continuous features at training percentiles, add spline columns, standardize.
+
+    Returns (Z, caps, knots, columns, center, scale).
+    """
     caps = {f: [float(v) for v in np.percentile(mf[f], CAP_PCTL)] for f in feats if f in CAPPED}
     X = mf[feats].copy()
     for f, (lo, hi) in caps.items():
         X[f] = X[f].clip(lo, hi)
+    knots = {f: [float(v) for v in np.percentile(X[f], KNOT_PCTL)] for f in feats if f in spline}
+    X = expand(X, knots)
     center, scale = X.mean().to_numpy(), X.std(ddof=0).to_numpy()
-    return (X.to_numpy(float) - center) / scale, caps, center, scale
+    return (X.to_numpy(float) - center) / scale, caps, knots, list(X.columns), center, scale
 
 
-def fit_tier(tier, mf, time, event_cvd, event_other, w, lam, lam_other, horizon) -> TierModel:
-    """Fit cause-specific Cox models for CVD and non-CVD death on the same standardized features."""
+def fit_tier(tier, mf, time, event_cvd, event_other, w, lam, lam_other, horizon, spline=SPLINE) -> TierModel:
+    """Fit cause-specific Cox models for CVD and non-CVD death on the same standardized design."""
     feats = FEATURES[tier]
-    Z, caps, center, scale = prepare(mf, feats)
+    Z, caps, knots, columns, center, scale = prepare(mf, feats, spline)
     beta = cox.fit(Z, time, event_cvd, w, lam)
     beta_o = cox.fit(Z, time, event_other, w, lam_other)
     t1, h1 = cox.baseline_hazard(Z, time, event_cvd, w, beta, horizon)
@@ -103,8 +150,9 @@ def fit_tier(tier, mf, time, event_cvd, event_other, w, lam, lam_other, horizon)
     dh1, dh2 = np.zeros(len(times)), np.zeros(len(times))
     dh1[np.searchsorted(times, t1)] = h1
     dh2[np.searchsorted(times, t2)] = h2
-    return TierModel(tier, feats, caps, center.tolist(), scale.tolist(), beta.tolist(), beta_o.tolist(),
-                     float(lam), float(lam_other), times.tolist(), dh1.tolist(), dh2.tolist(), float(horizon))
+    return TierModel(tier, feats, caps, knots, columns, center.tolist(), scale.tolist(), beta.tolist(),
+                     beta_o.tolist(), float(lam), float(lam_other), times.tolist(), dh1.tolist(), dh2.tolist(),
+                     float(horizon))
 
 
 class LabLiteModel:

@@ -42,6 +42,8 @@ def fit(X, time, event, w=None, lam=0.0, max_iter=50, tol=1e-9):
     order, start = _risk_sets(time)
     d = (w * event)[order]
     keep = d > 0
+    if not keep.any():  # no events: the partial likelihood is flat, so no covariate effects
+        return np.zeros(X.shape[1])
     Xk = X[order][keep]
 
     def objective(b):

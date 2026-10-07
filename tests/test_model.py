@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from lablite_cvd import cox
-from lablite_cvd.model import FEATURES, LabLiteModel, fit_tier, model_frame
+from lablite_cvd.model import FEATURES, LabLiteModel, fit_tier, model_frame, rcs_basis
 from lablite_cvd.pipeline.metrics import net_benefit
 
 
@@ -41,10 +41,13 @@ def test_fit_recovers_signal_and_json_roundtrip(tmp_path):
     df, time, event = _sim()
     mf = model_frame(df)
     w = np.ones(len(df))
-    model = LabLiteModel({t: fit_tier(t, mf, time, event, 0 * event, w, 1.0, 1.0, 10.0) for t in FEATURES})
-    coef = model.tiers["T3"].coefficients().set_index("feature")
+    linear = fit_tier("T3", mf, time, event, 0 * event, w, 1.0, 1.0, 10.0, spline=())
+    coef = linear.coefficients().set_index("column")
     assert coef.loc["log_uacr", "beta_per_unit"] == pytest.approx(0.3, abs=0.1)
     assert coef.loc["smoker", "beta_per_unit"] == pytest.approx(0.5, abs=0.15)
+
+    model = LabLiteModel({t: fit_tier(t, mf, time, event, 0 * event, w, 1.0, 1.0, 10.0) for t in FEATURES})
+    assert "log_uacr_s1" in model.tiers["T3"].columns
 
     model.to_json(tmp_path / "m.json")
     again = LabLiteModel.from_json(tmp_path / "m.json")
@@ -116,3 +119,23 @@ def test_predict_warns_outside_age_range():
                                          1.0, 1.0, 10.0)})
     with pytest.warns(UserWarning, match="age outside"):
         model.predict(df.iloc[[0]].assign(age=85.0), tier="T0")
+
+
+def test_rcs_basis_is_linear_beyond_outer_knots():
+    knots = [1.0, 3.0, 5.0, 7.0]
+    x = np.array([8.0, 9.0, 10.0, -1.0, -2.0, -3.0])
+    B = rcs_basis(x, knots)
+    np.testing.assert_allclose(B[0] - 2 * B[1] + B[2], 0, atol=1e-9)  # zero second difference above
+    np.testing.assert_allclose(B[3:], 0)  # identically zero below the first knot
+
+
+def test_spline_recovers_u_shaped_effect():
+    rng = np.random.default_rng(6)
+    df, _, _ = _sim(6000, seed=6)
+    lp = 0.004 * (df["bmi"] - 27) ** 2  # U-shaped log hazard in BMI, minimum at 27
+    t = rng.exponential(40 / np.exp(lp))
+    time, event = np.minimum(t, 12.0), (t <= 12.0).astype(float)
+    m = fit_tier("T0", model_frame(df), time, event, 0 * event, np.ones(len(df)), 0.0, 0.0, 10.0)
+    grid = np.array([19.0, 27.0, 37.0])
+    s = m.shape("bmi", grid, reference=27.0)
+    assert s[0] > 0.1 and s[2] > 0.1 and abs(s[1]) < 1e-12
