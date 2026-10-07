@@ -22,3 +22,11 @@ def test_versions_agree():
 def test_research_use_notice_in_readme_and_card():
     for name in ("README.md", "docs/model_card.md"):
         assert "research use only" in (ROOT / name).read_text(encoding="utf-8").lower(), name
+
+
+def test_zenodo_metadata_is_valid():
+    import json
+
+    meta = json.loads((ROOT / ".zenodo.json").read_text(encoding="utf-8"))
+    assert meta["upload_type"] == "software" and meta["license"] == "MIT"
+    assert meta["creators"][0]["orcid"] == "0009-0000-0540-7449"

@@ -3,6 +3,7 @@ message: "If you use LabLite-CVD, please cite it as below."
 title: "LabLite-CVD: explainable, tiered-input cardiovascular risk model quantifying the information cost of missing laboratory data"
 type: software
 version: 0.1.0
+date-released: 2026-10-07
 repository-code: "https://github.com/Gideono29/lablite-cvd"
 authors:
   - family-names: "Owusu"

@@ -1,0 +1,17 @@
+{
+  "title": "LabLite-CVD: explainable, tiered-input cardiovascular risk model quantifying the information cost of missing laboratory data",
+  "upload_type": "software",
+  "access_right": "open",
+  "description": "Explainable, tiered-input model for 10-year risk of cardiovascular death (non-CVD death as a competing event), developed on NHANES 1999-2010 with NCHS 2019 public-use linked mortality. Four nested tiers (office measures; + lipids; + HbA1c and eGFR; + urine albumin-to-creatinine ratio) of ridge-penalized cause-specific Cox models with restricted cubic splines quantify the information cost of missing laboratory data in discrimination, calibration, net benefit and reclassification, with survey-weighted IPCW evaluation and Rao-Wu bootstrap. Includes data download, cohort construction, model fitting, model card and a Python package (PyPI: lablite-cvd). Research use only; not a medical device.",
+  "creators": [
+    {"name": "Owusu, Gideon", "affiliation": "Michigan Technological University", "orcid": "0009-0000-0540-7449"}
+  ],
+  "license": "MIT",
+  "keywords": ["cardiovascular risk prediction", "missing data", "information cost", "explainable models", "competing risks", "NHANES", "urine albumin-to-creatinine ratio"],
+  "related_identifiers": [
+    {"relation": "isDerivedFrom", "identifier": "https://wwwn.cdc.gov/nchs/nhanes/", "resource_type": "dataset"},
+    {"relation": "isDerivedFrom", "identifier": "https://www.cdc.gov/nchs/data-linkage/mortality-public.htm", "resource_type": "dataset"},
+    {"relation": "isSupplementedBy", "identifier": "https://pypi.org/project/lablite-cvd/", "resource_type": "software"},
+    {"relation": "references", "identifier": "10.5281/zenodo.23083676", "scheme": "doi", "resource_type": "software"}
+  ]
+}

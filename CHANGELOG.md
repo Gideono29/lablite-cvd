@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-07)
+Published on PyPI as a pre-release: the fitted parameters are not yet verified by the maintainer
+(`meta.status` in the parameter file). A verified release will follow as a new version.
+
 - Fitted parameters shipped as package data; `lablite_cvd.load_model()` (warns: research use only).
 - Model card with performance, information cost, subgroup results and limitations;
   `scripts/subgroup_performance.py`.
