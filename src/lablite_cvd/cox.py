@@ -34,7 +34,7 @@ def log_partial_likelihood(beta, X, time, event, w):
 
 
 def fit(X, time, event, w=None, lam=0.0, max_iter=50, tol=1e-9):
-    """Maximize log PL - lam/2 * ||beta||^2 by Newton-Raphson. Returns beta."""
+    """Maximize log PL - lam/2 * ||beta||^2 by Newton-Raphson with step halving. Returns beta."""
     X = np.asarray(X, float)
     time = np.asarray(time, float)
     event = np.asarray(event, float)
@@ -42,15 +42,28 @@ def fit(X, time, event, w=None, lam=0.0, max_iter=50, tol=1e-9):
     order, start = _risk_sets(time)
     d = (w * event)[order]
     keep = d > 0
+    Xk = X[order][keep]
+
+    def objective(b):
+        s0, _, _ = _sums(X, w, X @ b, order, start, second=False)
+        return float(np.sum(d[keep] * ((X @ b)[order][keep] - np.log(s0[keep])))) - lam / 2 * b @ b
+
     beta = np.zeros(X.shape[1])
+    current = objective(beta)
     for _ in range(max_iter):
         s0, s1, s2 = _sums(X, w, X @ beta, order, start)
         s0, s1, s2, dk = s0[keep], s1[keep], s2[keep], d[keep]
         mean = s1 / s0[:, None]
-        grad = np.sum(dk[:, None] * (X[order][keep] - mean), axis=0) - lam * beta
+        grad = np.sum(dk[:, None] * (Xk - mean), axis=0) - lam * beta
         info = np.einsum("i,ijk->jk", dk, s2 / s0[:, None, None] - mean[:, :, None] * mean[:, None, :])
         step = np.linalg.solve(info + lam * np.eye(len(beta)), grad)
-        beta = beta + step
+        for _ in range(30):  # halve until the penalized log-likelihood does not decrease
+            with np.errstate(over="ignore", invalid="ignore"):
+                new = objective(beta + step)
+            if np.isfinite(new) and new >= current - 1e-12:
+                break
+            step = step / 2
+        beta, current = beta + step, new
         if np.max(np.abs(step)) < tol:
             break
     return beta

@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- UACR: pre-2007 urine creatinine adjusted to the 2007+ enzymatic method (NHANES ALB_CR_E equations).
+- SBP and BMI also capped at training 1st/99th percentiles; `predict()` warns for age outside 40-79.
+- Cox fit uses step halving (robust to near-collinear inputs).
+- Secondary analysis of participants naturally missing labs (`missing_group_check.csv`).
+- `scripts/nonlinearity_check.py`: splines vs linear terms by cross-validated likelihood.
 - Competing risks: each tier adds a cause-specific Cox model for non-CVD death; predicted risk is the cumulative
   incidence of CVD death (O/E 0.88 -> 0.98). Parameter JSON now stores baseline hazard steps for both causes.
 - Primary decision thresholds 1/5/10%; 7.5/20% secondary.

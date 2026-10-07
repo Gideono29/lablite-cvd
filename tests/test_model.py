@@ -108,3 +108,11 @@ def test_competing_risk_lowers_risk():
     without = fit_tier("T0", mf, time, event, 0 * event, w, 1.0, 1.0, 10.0).risk(mf)
     with_cr = fit_tier("T0", mf, time, event, other, w, 1.0, 1.0, 10.0).risk(mf)
     assert np.all(with_cr <= without + 1e-12) and with_cr.mean() < without.mean()
+
+
+def test_predict_warns_outside_age_range():
+    df, time, event = _sim()
+    model = LabLiteModel({"T0": fit_tier("T0", model_frame(df), time, event, 0 * event, np.ones(len(df)),
+                                         1.0, 1.0, 10.0)})
+    with pytest.warns(UserWarning, match="age outside"):
+        model.predict(df.iloc[[0]].assign(age=85.0), tier="T0")

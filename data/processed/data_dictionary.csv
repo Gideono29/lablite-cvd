@@ -16,7 +16,7 @@ hdl,mg/dL,HDL cholesterol,"LBDHDL (1999-2002), LBXHDD (2003-04), LBDHDD (2005-18
 hba1c,%,Glycohemoglobin,"LBXGH (LAB10, L10_B, L10_C, GHB_D-J)"
 creatinine,mg/dL,Serum creatinine standardized to IDMS (1999-2000: 1.013x+0.147; 2005-06: -0.016+0.978x),"LBXSCR / LBDSCR (LAB18, L40_B, L40_C, BIOPRO_D-J)"
 egfr,mL/min/1.73m2,CKD-EPI 2021 race-free eGFR,"derived from creatinine, age, sex"
-uacr,mg/g,"Urine albumin-to-creatinine ratio, URXUMA / URXUCR * 100; no cross-cycle assay adjustment","URXUMA, URXUCR (LAB16, L16_B, L16_C, ALB_CR_D-J)"
+uacr,mg/g,"Urine albumin-to-creatinine ratio, URXUMA / URXUCR * 100; pre-2007 urine creatinine adjusted to the 2007+ enzymatic method (NHANES ALB_CR_E equations)","URXUMA, URXUCR (LAB16, L16_B, L16_C, ALB_CR_D-J)"
 diabetes_any,0/1,Descriptive only: office diabetes or HbA1c >= 6.5%,"diabetes, LBXGH"
 statin,0/1,Currently taking prescribed lipid-lowering medication (statin proxy),BPQ100D
 prior_cvd,0/1,"Self-reported CHF, CHD, angina, MI or stroke (exclusion)",MCQ160B-F

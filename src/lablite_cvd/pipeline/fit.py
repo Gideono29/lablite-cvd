@@ -15,7 +15,7 @@ import pandas as pd
 from lablite_cvd import cox
 from lablite_cvd.model import FEATURES, LabLiteModel, fit_tier, model_frame, prepare
 from lablite_cvd.pipeline.cost import bootstrap, cost_rows, tier_metrics
-from lablite_cvd.pipeline.metrics import ipcw
+from lablite_cvd.pipeline.metrics import ipcw, weighted_auc
 
 LAMBDAS = (0.0, 1.0, 10.0, 100.0, 1000.0)
 
@@ -40,6 +40,28 @@ def _choose_lambda(mf, feats, time, event, sw, folds):
     Z = prepare(mf, feats)[0]
     scores = {lam: cox.cv_log_likelihood(Z, time, event, sw, lam, folds) for lam in LAMBDAS}
     return max(scores, key=scores.get), scores
+
+
+def missing_group_check(cohort: pd.DataFrame, cycles, model: LabLiteModel, horizon: float) -> pd.DataFrame:
+    """Secondary analysis: final models applied with tier="auto" to participants naturally missing a lab.
+
+    Descriptive only (few events). IPCW computed within this group by cycle.
+    """
+    g = cohort[(cohort["all_labs"] == 0) & cohort["cycle"].isin(cycles)].reset_index(drop=True)
+    pred = model.predict(g, tier="auto")
+    y, w, _ = ipcw(g, horizon)
+    sw = (g["wt"] / g["wt"].mean()).to_numpy(float)
+    rows = []
+    for label, m in [("all", np.ones(len(g), bool))] + [(t, (pred["tier"] == t).to_numpy()) for t in FEATURES]:
+        if m.sum() == 0:
+            continue
+        W = sw[m] * w[m]
+        obs = float(np.sum(W * y[m]) / W.sum())
+        exp_ = float(np.sum(sw[m] * pred["risk"].to_numpy()[m]) / sw[m].sum())
+        rows.append({"group": label, "n": int(m.sum()), "cvd_deaths": int(y[m].sum()), "observed": obs,
+                     "expected": exp_, "OE": obs / exp_ if exp_ > 0 else np.nan,
+                     "AUC": weighted_auc(pred["risk"].to_numpy()[m][W > 0], y[m][W > 0], W[W > 0])})
+    return pd.DataFrame(rows)
 
 
 def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261007):
@@ -102,6 +124,8 @@ def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261
     cost.to_csv(out / "information_cost.csv")
 
     oof.assign(SEQN=d["SEQN"], fold=outer).to_csv(out / "oof_predictions.csv.gz", index=False)
+    missing = missing_group_check(cohort, kept, model, horizon)
+    missing.to_csv(out / "missing_group_check.csv", index=False)
     (out / "fit_meta.json").write_text(json.dumps(
         {**meta, "lambdas_grid": LAMBDAS,
          "lambda_chosen": {t: {"cvd": m.lam, "other": m.lam_other} for t, m in tiers.items()},
@@ -113,6 +137,8 @@ def run_fit(data_dir: Path, out: Path, horizon=10.0, min_g=0.10, k=5, seed=20261
     print(perf[["OE", "cal_slope", "AUC", "NB_1", "NB_5", "NB_7.5", "NB_10", "NB_20"]].round(4).to_string())
     print("\nInformation cost (richer minus poorer tier; positive = lost without the labs; primary cut points):")
     print(cost[["dAUC", "dNB_1", "dNB_5", "dNB_10", "pct_reclassified_1/5/10"]].round(4).to_string())
+    print("\nSecondary: final models (tier=auto) on participants naturally missing a lab (descriptive):")
+    print(missing.round(4).to_string(index=False))
     print(f"\nWritten: {out}")
     return model, perf, cost
 

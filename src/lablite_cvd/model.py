@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -18,9 +19,10 @@ FEATURES = {"T0": OFFICE}
 for _t, _prev in (("T1", "T0"), ("T2", "T1"), ("T3", "T2")):
     FEATURES[_t] = FEATURES[_prev] + LABS[_t]
 
-# Laboratory features winsorized at the training 1st / 99th percentiles
-CAPPED = ["total_chol", "hdl", "hba1c", "egfr", "log_uacr"]
+# Continuous features (except age) winsorized at the training 1st / 99th percentiles
+CAPPED = ["sbp", "bmi", "total_chol", "hdl", "hba1c", "egfr", "log_uacr"]
 CAP_PCTL = (1, 99)
+AGE_RANGE = (40, 79)  # eligibility range of the development cohort
 
 
 def model_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -114,6 +116,9 @@ class LabLiteModel:
 
     def predict(self, df: pd.DataFrame, tier: str = "auto") -> pd.DataFrame:
         mf = model_frame(df)
+        if "age" in mf and not mf["age"].dropna().between(*AGE_RANGE).all():
+            warnings.warn(f"age outside {AGE_RANGE[0]}-{AGE_RANGE[1]} (the development range); predictions for "
+                          "those rows are extrapolations", stacklevel=2)
         chosen = available_tiers(df) if tier == "auto" else pd.Series(tier, index=df.index)
         risk = pd.Series(np.nan, index=df.index)
         for name, m in self.tiers.items():

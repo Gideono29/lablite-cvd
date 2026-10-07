@@ -5,31 +5,38 @@ Modeling decisions the code doesn't make for you. Each one names where it applie
 ## Decided (2026-10-07)
 1. Tiers: T0 office → T1 + total cholesterol, HDL → T2 + HbA1c, eGFR → T3 + UACR.
 2. Cohort keeps everyone with complete T0 inputs; tier comparisons use the all-labs subset; no imputation.
-3. Penalized Cox model per tier; published coefficients.
+3. Penalized Cox models per tier; published coefficients.
 4. Primary information cost: Δ net benefit at the decision thresholds (item 6); secondary ΔAUC,
    Δcalibration, reclassification.
-5. Horizon 10 years (cycles with adequate 10-year follow-up). UACR enters as log(UACR). Laboratory inputs
-   capped (winsorized) at their 1st and 99th percentiles in the training data.
+5. Horizon 10 years (cycles with adequate 10-year follow-up). UACR enters as log(UACR).
 6. Decision thresholds: 1/5/10% primary (ESC SCORE 10-year fatal-CVD cut points); 7.5/20% secondary.
 7. Absolute risk accounts for non-CVD death as a competing event: per tier, a second cause-specific Cox model
    for non-CVD death; CVD risk = cumulative incidence (O/E went from 0.88 to 0.98).
+8. Office-tier `diabetes` = self-report or glucose-lowering medication only (no HbA1c); `diabetes_any` is
+   descriptive only.
+9. UACR: pre-2007 urine creatinine (Jaffe, Beckman CX3) adjusted to the 2007+ enzymatic method (Roche ModP)
+   with the piecewise equations in the NHANES 2007–2008 ALB_CR_E documentation, applied to 1999–2006.
+   Median effect on pre-2007 UACR: +4.2% (IQR 1.5–6.3%). The documentation reports no change in the
+   urine albumin method. (An earlier version of this file wrongly said the albumin method changed in 2009;
+   the URXUMA2 / URXUCR2 variables in ALB_CR_F aren't a second assay.)
+10. Informative missingness: limitations paragraph plus a descriptive secondary analysis
+    (`outputs/fit/missing_group_check.csv`). In 1999–2010, the final models applied with `tier="auto"` to the
+    813 participants naturally missing a lab (41 CVD deaths) **underpredict**: observed 3.5% vs predicted
+    2.4%, O/E 1.46. This must appear in the model card as a caution for `tier="auto"`.
+11. Kept defaults: one pair of models per tier with `female` as a covariate (not sex-stratified); fitted with
+    normalized MEC weights; ridge penalty from {0, 1, 10, 100, 1000} by 5-fold cross-validated partial
+    likelihood.
+12. Continuous inputs except age (SBP, BMI and all labs) capped at the training 1st / 99th percentiles;
+    `predict()` warns when age is outside 40–79.
+13. Refitting bootstrap for the paper's main intervals: run after the TestPyPI release.
 
 ## Open
-1. **Office diabetes definition** (`pipeline/cohort.py::derive`). T0 `diabetes` is self-report or medication
-   only. EquiCVD also counted HbA1c ≥ 6.5%, but that would put lab information into the office tier.
-   `diabetes_any` keeps the HbA1c-inclusive version for description only. Confirm.
-2. **UACR assay changes across cycles.** UACR is computed as URXUMA / URXUCR × 100 in every cycle with no
-   adjustment. NHANES changed the urine creatinine method in 2007 and the albumin method in 2009 (ALB_CR_F
-   carries both assays: URXUMA2 / URXUCR2). Check the NHANES lab documentation for recommended
-   cross-cycle adjustments and decide whether to apply them.
-3. **Informative missingness.** Participants missing any lab (6.0%) had higher all-cause mortality
-   (20.4% vs 13.5%) and CVD mortality (4.2% vs 3.4%) than the all-labs subset. Decide how to report this,
-   e.g. a limitations paragraph or a secondary analysis on the naturally-missing group.
-4. **Defaults Claude chose; please confirm:** one pair of models per tier with `female` as a covariate (not
-   sex-stratified); linear terms only (no splines or interactions); fitted with normalized MEC weights;
-   ridge penalty from {0, 1, 10, 100, 1000} by 5-fold cross-validated partial likelihood (it barely matters:
-   the CV likelihood is flat between 0 and 10); capping applies to laboratory inputs only, not SBP or BMI.
-5. **Bootstrap does not refit the models.** `lablite-cvd bootstrap` (Rao–Wu over PSUs within strata, B = 200)
-   resamples fixed out-of-fold predictions, as EquiCVD did, so the intervals leave out model-fitting
-   variability and are somewhat too narrow. A refitting bootstrap is feasible (one fit takes ~2 min, so B = 200
-   is ~6 h). Decide whether the paper needs it.
+1. **Linear terms vs splines.** `scripts/nonlinearity_check.py` replaces each continuous term with a 4-knot
+   restricted cubic spline (2 extra df) and compares 5-fold cross-validated partial log-likelihood
+   (`outputs/fit/nonlinearity_check.csv`). Gains above ~2 suggest real non-linearity:
+   - CVD death: eGFR +6.9, BMI +6.3, age +3.0, log UACR +2.7, HDL +2.3; SBP, total cholesterol, HbA1c ≤ 0.
+   - Non-CVD death: BMI +14.7, HDL +13.3, HbA1c +10.9, eGFR +3.5; others ≤ 0.2.
+   Linear terms are not supported for several inputs, including two labs (eGFR, HbA1c) whose information
+   cost may be understated under linearity. Options: (a) prespecified splines for all continuous inputs in
+   both models; (b) splines only where the check shows a gain (data-driven, needs reporting as such);
+   (c) keep linear and report the check as a limitation.

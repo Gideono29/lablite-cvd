@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lablite_cvd.pipeline.cohort import add_missingness, ckd_epi_2021, derive, missingness_table, select
+from lablite_cvd.pipeline.cohort import (add_missingness, adjust_urine_creatinine_pre2007, ckd_epi_2021, derive,
+                                         missingness_table, select)
 
 
 def test_ckd_epi_2021_reference_value():
@@ -58,3 +59,18 @@ def test_missing_labs_kept_missing_office_excluded():
     table = missingness_table(d)
     assert table["variable"].is_unique
     assert table.set_index("variable").loc["total_chol", "n_missing"] == 1
+
+
+def test_urine_creatinine_adjustment_equations():
+    # One value per piece of the NHANES ALB_CR_E equations
+    got = adjust_urine_creatinine_pre2007([50.0, 100.0, 300.0, np.nan])
+    np.testing.assert_allclose(got[:3], [(1.02 * 50 ** 0.5 - 0.36) ** 2, (1.05 * 10 - 0.74) ** 2,
+                                         (1.01 * 300 ** 0.5 - 0.10) ** 2])
+    assert np.isnan(got[3])
+
+
+def test_uacr_adjusted_only_before_2007():
+    early = derive(_raw(cycle="2005-2006", cycle_start=2005))
+    late = derive(_raw(cycle="2007-2008", cycle_start=2007))
+    assert late["uacr"].iloc[0] == pytest.approx(10.0)
+    assert early["uacr"].iloc[0] == pytest.approx(1000 / (1.05 * 10 - 0.74) ** 2)

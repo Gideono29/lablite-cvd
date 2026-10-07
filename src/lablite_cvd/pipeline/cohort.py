@@ -73,6 +73,18 @@ def ckd_epi_2021(scr, age, female):
             * np.where(female, 1.012, 1.0))
 
 
+def adjust_urine_creatinine_pre2007(x):
+    """Urine creatinine (mg/dL) from the pre-2007 Jaffe method to the 2007+ enzymatic method.
+
+    Piecewise equations from the NHANES 2007-2008 ALB_CR_E documentation:
+    X < 75: (1.02*sqrt(X) - 0.36)^2; 75 <= X < 250: (1.05*sqrt(X) - 0.74)^2; X >= 250: (1.01*sqrt(X) - 0.10)^2.
+    """
+    x = np.asarray(x, float)
+    r = np.sqrt(x)
+    base = np.select([x < 75, x < 250], [1.02 * r - 0.36, 1.05 * r - 0.74], 1.01 * r - 0.10)
+    return np.where(np.isnan(x), np.nan, np.clip(base, 0, None) ** 2)
+
+
 def derive(raw: pd.DataFrame) -> pd.DataFrame:
     d = pd.DataFrame({"SEQN": raw["SEQN"].astype(int), "cycle": raw["cycle"],
                       "cycle_start": raw["cycle_start"]})
@@ -105,10 +117,11 @@ def derive(raw: pd.DataFrame) -> pd.DataFrame:
     cr = np.where(d["cycle_start"] == 2005, -0.016 + 0.978 * cr, cr)
     d["creatinine"] = cr
     d["egfr"] = ckd_epi_2021(d["creatinine"], d["age"], d["female"])
-    # UACR (mg/g) = urine albumin (ug/mL = mg/L) / urine creatinine (mg/dL) * 100. No cross-cycle assay
-    # adjustment is applied yet (see docs/open_questions.md).
+    # UACR (mg/g) = urine albumin (ug/mL = mg/L) / urine creatinine (mg/dL) * 100, with pre-2007 urine
+    # creatinine (Jaffe, Beckman CX3) adjusted to the 2007+ enzymatic Roche ModP method.
     ucr = raw["URXUCR"].where(raw["URXUCR"] > 0)
-    d["uacr"] = raw["URXUMA"] / ucr * 100
+    ucr = np.where(d["cycle_start"] < 2007, adjust_urine_creatinine_pre2007(ucr), ucr)
+    d["uacr"] = raw["URXUMA"] / pd.Series(ucr, index=d.index).where(lambda s: s > 0) * 100
 
     # Descriptive only, never a model input: diabetes including HbA1c >= 6.5%
     d["diabetes_any"] = np.where((d["diabetes"] == 1) | (d["hba1c"] >= 6.5), 1.0,
@@ -173,7 +186,8 @@ DICTIONARY = {
     "creatinine": ("mg/dL", "Serum creatinine standardized to IDMS (1999-2000: 1.013x+0.147; 2005-06: "
                    "-0.016+0.978x)", "LBXSCR / LBDSCR (LAB18, L40_B, L40_C, BIOPRO_D-J)"),
     "egfr": ("mL/min/1.73m2", "CKD-EPI 2021 race-free eGFR", "derived from creatinine, age, sex"),
-    "uacr": ("mg/g", "Urine albumin-to-creatinine ratio, URXUMA / URXUCR * 100; no cross-cycle assay adjustment",
+    "uacr": ("mg/g", "Urine albumin-to-creatinine ratio, URXUMA / URXUCR * 100; pre-2007 urine creatinine adjusted "
+             "to the 2007+ enzymatic method (NHANES ALB_CR_E equations)",
              "URXUMA, URXUCR (LAB16, L16_B, L16_C, ALB_CR_D-J)"),
     "diabetes_any": ("0/1", "Descriptive only: office diabetes or HbA1c >= 6.5%", "diabetes, LBXGH"),
     "statin": ("0/1", "Currently taking prescribed lipid-lowering medication (statin proxy)", "BPQ100D"),
