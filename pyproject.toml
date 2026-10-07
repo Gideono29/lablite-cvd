@@ -1,21 +1,21 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "lablite-cvd"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "LabLite-CVD: explainable, tiered-input cardiovascular risk model quantifying the information cost of missing laboratory data (research use only)"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Gideon Owusu", email = "gideono@mtu.edu" }]
 maintainers = [{ name = "Gideon Owusu", email = "gideono@mtu.edu" }]
 keywords = ["cardiovascular risk", "missing data", "explainable models", "NHANES"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
@@ -33,3 +33,6 @@ Repository = "https://github.com/Gideono29/lablite-cvd"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+lablite_cvd = ["data/*.json"]

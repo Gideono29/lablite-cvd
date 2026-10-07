@@ -52,6 +52,8 @@ def expand(X: pd.DataFrame, knots: dict) -> pd.DataFrame:
 def model_frame(df: pd.DataFrame) -> pd.DataFrame:
     """Derive model features from cohort / user columns (no capping)."""
     out = pd.DataFrame(index=df.index)
+    if "female" not in df and "sex" not in df:
+        raise ValueError("input needs a 'sex' column ('Female'/'Male' or 'F'/'M') or a 0/1 'female' column")
     if "female" in df:
         out["female"] = df["female"].astype(float)
     else:
@@ -181,8 +183,24 @@ class LabLiteModel:
 
     @classmethod
     def from_json(cls, path):
-        payload = json.loads(Path(path).read_text())
+        text = path.read_text() if hasattr(path, "read_text") else Path(path).read_text()
+        payload = json.loads(text)
         return cls({k: TierModel(**v) for k, v in payload["tiers"].items()}, payload.get("meta"))
+
+
+_NOTICE_SHOWN = False
+
+
+def load_model() -> LabLiteModel:
+    """Load the published LabLite-CVD parameters shipped with the package (research use only)."""
+    global _NOTICE_SHOWN
+    from importlib.resources import files
+
+    from lablite_cvd import RESEARCH_USE_NOTICE
+    if not _NOTICE_SHOWN:
+        warnings.warn(RESEARCH_USE_NOTICE, UserWarning, stacklevel=2)
+        _NOTICE_SHOWN = True
+    return LabLiteModel.from_json(files("lablite_cvd") / "data" / "lablite_params.json")
 
 
 assert set(FEATURES) == set(TIERS)

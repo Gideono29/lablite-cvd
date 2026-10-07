@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 (unreleased)
+- Fitted parameters shipped as package data; `lablite_cvd.load_model()` (warns: research use only).
+- Model card with performance, information cost, subgroup results and limitations;
+  `scripts/subgroup_performance.py`.
+- Clear error when `sex` / `female` is missing; SPDX license metadata.
 - Prespecified restricted cubic splines (4 knots) for every continuous input except age; knots stored in the
   parameter JSON; `TierModel.shape()` and `outputs/fit/shape_functions.csv` give log hazard ratio curves.
 - `cox.fit` returns zero coefficients when there are no events.
