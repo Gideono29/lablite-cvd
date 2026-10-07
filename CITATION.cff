@@ -4,6 +4,15 @@ title: "LabLite-CVD: explainable, tiered-input cardiovascular risk model quantif
 type: software
 version: 0.1.0
 date-released: 2026-10-07
+# Concept DOI: always resolves to the latest version
+doi: 10.5281/zenodo.23225193
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23225193
+    description: Concept DOI (all versions, resolves to the latest)
+  - type: doi
+    value: 10.5281/zenodo.23225194
+    description: Version DOI for v0.1.0
 repository-code: "https://github.com/Gideono29/lablite-cvd"
 authors:
   - family-names: "Owusu"

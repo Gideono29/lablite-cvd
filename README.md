@@ -1,5 +1,9 @@
 # LabLite-CVD
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23225193.svg)](https://doi.org/10.5281/zenodo.23225193)
+[![PyPI](https://img.shields.io/pypi/v/lablite-cvd)](https://pypi.org/project/lablite-cvd/)
+[![tests](https://github.com/Gideono29/lablite-cvd/actions/workflows/tests.yml/badge.svg)](https://github.com/Gideono29/lablite-cvd/actions/workflows/tests.yml)
+
 > **Research use only.** LabLite-CVD is not a medical device and must not be used for individual
 > clinical decisions.
 
@@ -87,4 +91,6 @@ albumin/creatinine added.
 
 ## Citation
 
-See `CITATION.cff`. A Zenodo DOI will be added at the first release.
+See `CITATION.cff`. Cite all versions with the concept DOI
+[10.5281/zenodo.23225193](https://doi.org/10.5281/zenodo.23225193), or v0.1.0 specifically with
+[10.5281/zenodo.23225194](https://doi.org/10.5281/zenodo.23225194).
