@@ -1,0 +1,9 @@
+step,n,excluded
+All NHANES 1999-2018 participants,101316,0
+Age 40-79 at screening,31995,69321
+Examined at mobile examination center,30704,1291
+Not pregnant,30673,31
+"No self-reported CHD, angina, MI, heart failure or stroke",26357,4316
+Eligible for mortality linkage with follow-up,26293,64
+Positive MEC examination weight,26293,0
+"Complete office inputs (age, sex, sbp, bp_treated, smoker, diabetes, bmi)",24861,1432

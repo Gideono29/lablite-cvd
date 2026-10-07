@@ -1,0 +1,86 @@
+{
+ "n": 24861,
+ "cvd_deaths": 863,
+ "other_deaths": 2589,
+ "median_followup_years": 9.166666666666666,
+ "n_by_tier": {
+  "T0": 1229,
+  "T1": 111,
+  "T2": 147,
+  "T3": 23374
+ },
+ "n_all_labs": 23374,
+ "cvd_deaths_all_labs": 800,
+ "by_cycle": [
+  {
+   "cycle": "1999-2000",
+   "n": 2065,
+   "all_labs": 1916,
+   "cvd_deaths": 201,
+   "max_fu": 20.75
+  },
+  {
+   "cycle": "2001-2002",
+   "n": 2205,
+   "all_labs": 2093,
+   "cvd_deaths": 152,
+   "max_fu": 19.083333333333332
+  },
+  {
+   "cycle": "2003-2004",
+   "n": 2017,
+   "all_labs": 1914,
+   "cvd_deaths": 132,
+   "max_fu": 17.0
+  },
+  {
+   "cycle": "2005-2006",
+   "n": 2078,
+   "all_labs": 1981,
+   "cvd_deaths": 102,
+   "max_fu": 15.0
+  },
+  {
+   "cycle": "2007-2008",
+   "n": 2804,
+   "all_labs": 2639,
+   "cvd_deaths": 100,
+   "max_fu": 13.25
+  },
+  {
+   "cycle": "2009-2010",
+   "n": 2993,
+   "all_labs": 2806,
+   "cvd_deaths": 70,
+   "max_fu": 11.25
+  },
+  {
+   "cycle": "2011-2012",
+   "n": 2553,
+   "all_labs": 2351,
+   "cvd_deaths": 51,
+   "max_fu": 9.25
+  },
+  {
+   "cycle": "2013-2014",
+   "n": 2813,
+   "all_labs": 2659,
+   "cvd_deaths": 35,
+   "max_fu": 7.083333333333333
+  },
+  {
+   "cycle": "2015-2016",
+   "n": 2701,
+   "all_labs": 2555,
+   "cvd_deaths": 15,
+   "max_fu": 5.083333333333333
+  },
+  {
+   "cycle": "2017-2018",
+   "n": 2632,
+   "all_labs": 2460,
+   "cvd_deaths": 5,
+   "max_fu": 3.0833333333333335
+  }
+ ]
+}

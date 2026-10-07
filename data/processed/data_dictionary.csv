@@ -1,0 +1,37 @@
+column,type_units,definition,source
+SEQN,int,Respondent sequence number (unique across cycles),DEMO.SEQN
+cycle,str,"NHANES survey cycle, e.g. 1999-2000",file
+cycle_start,int,First calendar year of the cycle,file
+age,years,Age at screening,RIDAGEYR
+female,0/1,Female sex,RIAGENDR==2
+sex,str,Female / Male,RIAGENDR
+race,str,"Race/ethnicity (Mexican American, Other Hispanic, NH White, NH Black, Other/Multiracial)",RIDRETH1
+sbp,mmHg,Mean of available auscultatory systolic readings,BPXSY1-BPXSY4
+bp_treated,0/1,Currently taking prescribed BP-lowering medication,"BPQ020, BPQ050A"
+smoker,0/1,Current smoker: >=100 lifetime cigarettes and now smokes every day or some days,"SMQ020, SMQ040"
+diabetes,0/1,"Office definition: self-reported diagnosis, insulin, or oral agents (no HbA1c)","DIQ010, DIQ050, DIQ070"
+bmi,kg/m2,Body mass index,BMXBMI
+total_chol,mg/dL,Serum total cholesterol,"LBXTC (LAB13, L13_B, L13_C, TCHOL_D-J)"
+hdl,mg/dL,HDL cholesterol,"LBDHDL (1999-2002), LBXHDD (2003-04), LBDHDD (2005-18)"
+hba1c,%,Glycohemoglobin,"LBXGH (LAB10, L10_B, L10_C, GHB_D-J)"
+creatinine,mg/dL,Serum creatinine standardized to IDMS (1999-2000: 1.013x+0.147; 2005-06: -0.016+0.978x),"LBXSCR / LBDSCR (LAB18, L40_B, L40_C, BIOPRO_D-J)"
+egfr,mL/min/1.73m2,CKD-EPI 2021 race-free eGFR,"derived from creatinine, age, sex"
+uacr,mg/g,"Urine albumin-to-creatinine ratio, URXUMA / URXUCR * 100; no cross-cycle assay adjustment","URXUMA, URXUCR (LAB16, L16_B, L16_C, ALB_CR_D-J)"
+diabetes_any,0/1,Descriptive only: office diabetes or HbA1c >= 6.5%,"diabetes, LBXGH"
+statin,0/1,Currently taking prescribed lipid-lowering medication (statin proxy),BPQ100D
+prior_cvd,0/1,"Self-reported CHF, CHD, angina, MI or stroke (exclusion)",MCQ160B-F
+pregnant,0/1,Pregnant at exam (exclusion),RIDEXPRG==1
+mec_examined,0/1,Examined at mobile examination center,RIDSTATR==2
+income,str,"Family income-to-poverty ratio group: <1.3, 1.3-3.5, >3.5",INDFMPIR
+education,str,"Highest education (adults 20+): <HS, HS/GED, Some college, College+",DMDEDUC2
+wt,weight,"20-year combined MEC weight: WTMEC4YR*2/10 for 1999-2002, WTMEC2YR/10 otherwise","WTMEC2YR, WTMEC4YR"
+strata,int,Masked variance pseudo-stratum,SDMVSTRA
+psu,int,Masked variance pseudo-PSU,SDMVPSU
+linkage_eligible,0/1,Eligible for mortality linkage,LMF ELIGSTAT==1
+time,years,Follow-up from MEC exam to death or 2019-12-31,LMF PERMTH_EXM/12
+event,0/1/2,"0 alive at end of follow-up, 1 CVD death (UCOD 001 heart disease or 005 cerebrovascular), 2 non-CVD death","LMF MORTSTAT, UCOD_LEADING"
+has_lipids,0/1,Total cholesterol and HDL both present,derived
+has_glyc_renal,0/1,HbA1c and eGFR both present,derived
+has_uacr,0/1,UACR present,derived
+all_labs,0/1,All laboratory inputs present (tier comparison subset),derived
+tier,str,Highest nested tier (T0-T3) whose inputs are all present,derived

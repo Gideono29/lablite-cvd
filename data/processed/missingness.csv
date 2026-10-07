@@ -1,0 +1,6 @@
+variable,n_missing,pct_missing,pct_missing_weighted
+total_chol,1229,4.94,4.0
+hdl,1228,4.94,4.0
+hba1c,920,3.7,2.94
+egfr,1296,5.21,4.22
+uacr,303,1.22,1.01

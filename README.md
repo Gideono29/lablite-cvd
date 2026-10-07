@@ -10,36 +10,46 @@ renal or urine-albumin measurements aren't available.
 Maintainer: Gideon Owusu, Michigan Technological University
 ([ORCID 0009-0000-0540-7449](https://orcid.org/0009-0000-0540-7449))
 
-**Status:** pre-alpha (`0.1.0.dev0`). Package scaffolding only; no fitted model yet.
+**Status:** pre-alpha (`0.1.0.dev0`). Data pipeline and cohort built; no fitted model yet.
 
-## Input tiers (draft)
+## Input tiers
 
 | Tier | Adds | Inputs |
 |---|---|---|
-| T0 | office only | age, sex, systolic BP, BP treatment, smoking, diabetes, BMI |
+| T0 | office only | age, sex, systolic BP, BP treatment, smoking, diabetes (self-report/medication), BMI |
 | T1 | lipids | + total cholesterol, HDL cholesterol |
 | T2 | glycemic / renal | + HbA1c, eGFR |
 | T3 | urine albumin | + UACR |
 
-`lablite_cvd.available_tier(record)` returns the highest tier whose inputs are all present.
+`lablite_cvd.available_tier(record)` returns the highest tier whose inputs are all present
+(`available_tiers(df)` for a DataFrame).
 
-## Development
+## Data pipeline
 
 ```bash
-pip install -e .[test]
+pip install -e .[data,test]
+lablite-cvd download   # 127 files from wwwn.cdc.gov and ftp.cdc.gov; SHA-256 manifest in data/raw/manifest.json
+lablite-cvd cohort     # data/processed/{cohort.csv.gz, cohort_flow.csv, missingness.csv, data_dictionary.csv}
 pytest -q
 ```
+
+**Cohort:** NHANES 1999–2018 linked to the NCHS 2019 public-use mortality files. Adults aged 40–79 who were
+examined, not pregnant, had no self-reported CVD, were eligible for linkage and had complete office (T0)
+inputs. Laboratory values are **left missing**, never imputed; each participant's highest available tier is
+recorded. Outcome: CVD death (heart disease or cerebrovascular), with non-CVD death as a competing event.
 
 ## Documentation
 
 | File | Contents |
 |---|---|
 | `docs/model_card.md` | Model card (draft) |
+| `docs/open_questions.md` | Modeling decisions taken and still open |
+| `data/processed/data_dictionary.csv` | Every cohort column: units, definition, NHANES source |
 
 ## Related
 
-Data handling will follow [EquiCVD Bench](https://doi.org/10.5281/zenodo.23083676) (NHANES 1999–2018 with NCHS
-2019 public-use linked mortality).
+The data handling is ported from [EquiCVD Bench](https://doi.org/10.5281/zenodo.23083676) v1.0.0, with urine
+albumin/creatinine added.
 
 ## Citation
 

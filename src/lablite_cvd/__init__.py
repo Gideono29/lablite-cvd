@@ -3,7 +3,7 @@
 Not a medical device. Not validated for clinical decision-making.
 """
 
-from lablite_cvd.tiers import TIERS, available_tier
+from lablite_cvd.tiers import TIERS, available_tier, available_tiers
 
 __version__ = "0.1.0.dev0"
 
@@ -12,4 +12,4 @@ RESEARCH_USE_NOTICE = (
     "used for individual clinical decisions."
 )
 
-__all__ = ["TIERS", "available_tier", "RESEARCH_USE_NOTICE", "__version__"]
+__all__ = ["TIERS", "available_tier", "available_tiers", "RESEARCH_USE_NOTICE", "__version__"]

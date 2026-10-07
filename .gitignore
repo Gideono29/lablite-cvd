@@ -1,5 +1,6 @@
 # NHANES / NCHS files are downloaded, not committed
-data/raw/
+data/raw/**/*.xpt
+data/raw/**/*.dat
 data/processed/*.csv.gz
 *.part
 

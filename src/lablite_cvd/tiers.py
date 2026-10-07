@@ -1,6 +1,6 @@
 """Input tiers: which predictors each model tier requires.
 
-DRAFT: tier membership is a modeling decision owned by the maintainer and is not final.
+Tier membership approved by the maintainer on 2026-10-07 (docs/open_questions.md).
 Each tier is a strict superset of the one before it.
 """
 
@@ -29,3 +29,15 @@ def available_tier(record: Mapping) -> str | None:
             break
         best = name
     return best
+
+
+def available_tiers(df: pd.DataFrame) -> pd.Series:
+    """Row-wise :func:`available_tier` for a DataFrame (None where T0 is incomplete)."""
+    out = pd.Series([None] * len(df), index=df.index, dtype=object)
+    still = pd.Series(True, index=df.index)
+    for name, required in TIERS.items():
+        cols = [c for c in required if c in df.columns]
+        complete = df[cols].notna().all(axis=1) if len(cols) == len(required) else False
+        still &= complete
+        out[still] = name
+    return out
